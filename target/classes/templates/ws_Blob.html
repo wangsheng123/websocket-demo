@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>>Spring Boot+WebSocket+广播式</title>
+</head>
+<body>
+Welcome<br/>
+<input id="text" type="text"/>
+<button onclick="send()">Send</button>
+<button onclick="closeWebSocket()">Close</button>
+<div id="message">
+</div>
+<a id="mylink" download="新建文本文档.txt" href="">DownLoad</a>
+<div align="center">
+    <input type="file" value="上传文件"/>
+    <button onclick="sendFile()">发送文件</button>
+</div>
+<script>
+    var websocket = null;
+    if ('WebSocket' in window) {
+        websocket = new WebSocket("ws://localhost:8888/webSocket")
+    }
+    else {
+        alert("Your browser not support webSocket");
+    }
+
+
+    //将消息显示在网页上
+    function setMessageInnerHTML(innerHTML) {
+        document.getElementById('message').innerHTML += innerHTML + '<br/>';
+    }
+
+    //接收到消息回调
+    websocket.onmessage = function (event) {
+        setMessageInnerHTML(event.data);
+        console.log(event.data);
+        var csvUrl = URL.createObjectURL(event.data);
+        document.getElementById("mylink").href = csvUrl;
+        if (event.data instanceof Blob) {
+            console.log("Blob")
+        }else if(event.data instanceof ArrayBuffer){
+            console.log("ArrayBuffer")
+        }
+    }
+
+    //发生错误时调用方法
+    websocket.onerror = function () {
+        setMessageInnerHTML("发生error")
+    }
+
+    //监听窗口关闭事件，当窗口关闭时，主动去关闭websocket连接，防止连接还没断开就关闭窗口，server端会抛异常。
+    window.onbeforeunload = function () {
+        websocket.close();
+    }
+    //打开连接时调用
+    websocket.onopen = function () {
+        setMessageInnerHTML("open")
+        console.log(websocket.binaryType);
+        var bufferedAmount = websocket.bufferedAmount;
+        console.log(bufferedAmount)
+        console.log(websocket)
+
+    }
+    //关闭时调用
+    websocket.onclose = function () {
+        setMessageInnerHTML("close")
+    }
+
+    //关闭连接
+    function closeWebSocket() {
+        websocket.close();
+    }
+
+    //发送消息
+    function send() {
+        var message = document.getElementById('text').value;
+        websocket.send(message);
+    }
+    // 发送文件
+    function sendFile(e) {
+        var file=document.querySelector('input[type=file]').files[0];
+        console.log(file)
+        websocket.send(file);
+        console.log(websocket.bufferedAmount)
+    }
+</script>
+</body>
+</html>
